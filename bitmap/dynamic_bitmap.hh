@@ -1,3 +1,14 @@
+/* Almost identical to bitmap, except practically none of the
+ * operations can be constexpr and some of the static constexpr values
+ * have to instead by constexpr instance methods
+ *
+ * Much slower than bitmap for small sizes (< ~512 bits)
+ *
+ * TODO: Merge with bitmap, with: `using dynamic_bitmap = bitmap<0>;`
+ *
+ * Author: Ryan Gambord <Ryan.Gambord@oregonstate.edu>
+ * Date: July 26 2023
+ */
 #pragma once
 #include <algorithm>
 #include <bitset>
@@ -9,9 +20,9 @@
 #include <type_traits>
 #include <vector>
 
-#include "util/bitops.hh"
-#include "util/fitted_int.hh"
-#include "util/reverse_adaptor.hh"
+#include "util/bitops/bitops.hh"
+#include "util/fitted_int/fitted_int.hh"
+#include "util/adaptors/reverse.hh"
 
 class dynamic_bitmap
 {
@@ -46,7 +57,7 @@ private:
   class ChunkOffset
   {
   private:
-    using T = FittedInt::uint_fastX_t<CHUNK_BITS>;
+    using T = fitted_int::uint_fastX_t<CHUNK_BITS>;
     T _val;
 
   public:
@@ -186,7 +197,7 @@ public:
 
   BitId count() const noexcept { 
     BitId cnt = 0;
-    for (auto const&v : _bit_vec) cnt += popcount(v);
+    for (auto const&v : _bit_vec) cnt += bitops::popcount(v);
     return cnt;
   }
 
@@ -255,13 +266,13 @@ public:
       if (_id >= _ref.CHUNK_COUNT()) throw std::range_error("iterate past end");
       ChunkT chunk = _ref._bit_vec[_id] >> (_offset + 1);
       if ((_offset + 1 < CHUNK_BITS) && chunk) {
-        _offset += countr_zero(chunk) + 1;
+        _offset += bitops::countr_zero(chunk) + 1;
       } else {
         _offset = 0; /* IMPORTANT */
         while (++_id < _ref.CHUNK_COUNT()) {
           chunk = _ref._bit_vec[_id];
           if (chunk) {
-            _offset = countr_zero(chunk);
+            _offset = bitops::countr_zero(chunk);
             break;
           }
         }
@@ -274,13 +285,13 @@ public:
     {
       ChunkT chunk = _ref._bit_vec[_id] << (CHUNK_BITS - _offset);
       if (_offset && chunk) {
-        _offset -= countl_zero(chunk);
+        _offset -= bitops::countl_zero(chunk);
       } else {
         _offset = 0; /* IMPORTANT */
         while (_id-- > 0) {
           chunk = _ref._bit_vec[_id];
           if (chunk) {
-            _offset = countl_zero(chunk);
+            _offset = bitops::countl_zero(chunk);
             break;
           }
           throw std::range_error("iterate before begin");
@@ -305,7 +316,7 @@ public:
     for (; id < CHUNK_COUNT(); ++id) {
       ChunkT chunk = _bit_vec[id];
       if (chunk) {
-        offset = countr_zero(chunk);
+        offset = bitops::countr_zero(chunk);
         break;
       }
     }

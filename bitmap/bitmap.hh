@@ -1,3 +1,17 @@
+/* A slightly better version of std::bitset
+ *
+ * Supports fast iteration vs std::vector<bool> and std::bitset while also supporting the bitwise
+ * arithmetic of std::bitset
+ *
+ * Benchmark results:
+ * + Several orders of magnitude faster than std::vector<bool> for just about anything.
+ * + On-par with std::bitset for most operations; orders of magnitude faster iteration over set
+ *   bits.
+ * + Dynamic_bitmap is ~20x slower for small sizes, but reaches parity around ~256-512 bits.
+ *
+ * Author: Ryan Gambord <Ryan.Gambord@oregonstate.edu>
+ * Date: July 26 2023
+ */
 #pragma once
 #include <algorithm>
 #include <array>
@@ -7,36 +21,39 @@
 #include <iostream>
 #include <stdexcept>
 #include <type_traits>
+#include <vector>
 
-#include "util/fitted_int/fitted_int.hh"
+#include "util/adaptors/reverse.hh"
 #include "util/bitops/bitops.hh"
-#include "util/adaptors/reverse_adaptor.hh"
+#include "util/fitted_int/fitted_int.hh"
 
 template <std::size_t N>
 class bitmap
 {
 public:
-  using id_type = FittedInt::uint_fastX_t<N>;
+  using id_type = fitted_int::uint_fastX_t<N>;
+
 private:
-  /*
-  using ChunkT = typename std::conditional<N <= 8, std::uint_fast8_t,
+  /* clang-format off */
+  using ChunkT = typename std::conditional<N <= 8,  std::uint_fast8_t,
                  typename std::conditional<N <= 16, std::uint_fast16_t,
-                 typename std::conditional<N <= 32, std::uint_fast32_t, std::uint_fast64_t>::type>::type>::type;
-                 */
-  using ChunkT = std::uint64_t;
+                 typename std::conditional<N <= 32, std::uint_fast32_t,
+                                                    std::uint_fast64_t
+                 >::type>::type>::type;
+  /* clang-format on */
   constexpr static auto CHUNK_BITS = std::numeric_limits<ChunkT>::digits;
   constexpr static auto CHUNK_COUNT = (N + CHUNK_BITS - 1) / CHUNK_BITS;
   constexpr static auto PAD_BITS = (CHUNK_BITS * CHUNK_COUNT) - N;
-  constexpr static auto PAD_MASK = (ChunkT) ((~(ChunkT)0) >> PAD_BITS);
+  constexpr static auto PAD_MASK = (ChunkT)((~(ChunkT)0) >> PAD_BITS);
 
   std::array<ChunkT, CHUNK_COUNT> _bit_array;
-  
+
   class BitId;
 
   class ChunkId
   {
   private:
-    using T = FittedInt::uint_fastX_t<CHUNK_COUNT>;
+    using T = fitted_int::uint_fastX_t<CHUNK_COUNT>;
     T _val;
 
   public:
@@ -49,7 +66,7 @@ private:
   class ChunkOffset
   {
   private:
-    using T = FittedInt::uint_fastX_t<CHUNK_BITS>;
+    using T = fitted_int::uint_fastX_t<CHUNK_BITS>;
     T _val;
 
   public:
@@ -93,14 +110,14 @@ public:
     static_assert(std::numeric_limits<unsigned long long>::digits >= CHUNK_BITS);
     std::bitset<N> ret;
 
-    for (ChunkT const& chunk : reverse_adaptor(_bit_array)) {
+    for (ChunkT const &chunk : adaptor::reverse(_bit_array)) {
       ret <<= CHUNK_BITS;
       ret |= chunk;
     }
     return ret;
   }
-public:
 
+public:
   constexpr std::size_t size() const { return N; }
 
   constexpr bitmap &set(BitId bit, bool val = true)
@@ -177,7 +194,8 @@ public:
 
   constexpr bool any() const noexcept
   {
-    for (auto const v : _bit_array) if (v) return true;
+    for (auto const v : _bit_array)
+      if (v) return true;
     return false;
   }
   constexpr bool none() const noexcept { return !any(); }
@@ -187,9 +205,10 @@ public:
            std::all_of(_bit_array.begin(), _bit_array.end() - 1, [](auto x) { return !~x; });
   }
 
-  constexpr BitId count() const noexcept { 
+  constexpr BitId count() const noexcept
+  {
     BitId cnt = 0;
-    for (auto const&v : _bit_array) cnt += popcount(v);
+    for (auto const &v : _bit_array) cnt += bitops::popcount(v);
     return cnt;
   }
 
@@ -226,7 +245,7 @@ public:
   constexpr bool operator[](BitId id) const
   {
     ChunkT mask = ChunkT(1) << ChunkOffset(id);
-    return (bool) (ChunkT) (_bit_array[ChunkId(id)] & mask);
+    return (bool)(ChunkT)(_bit_array[ChunkId(id)] & mask);
   }
 
   class biterator
@@ -258,13 +277,13 @@ public:
       if (_id >= CHUNK_COUNT) throw std::range_error("iterate past end");
       ChunkT chunk = _ref._bit_array[_id] >> (_offset + 1);
       if ((_offset + 1 < CHUNK_BITS) && chunk) {
-        _offset += countr_zero(chunk) + 1;
+        _offset += bitops::countr_zero(chunk) + 1;
       } else {
         _offset = 0; /* IMPORTANT */
         while (++_id < CHUNK_COUNT) {
           chunk = _ref._bit_array[_id];
           if (chunk) {
-            _offset = countr_zero(chunk);
+            _offset = bitops::countr_zero(chunk);
             break;
           }
         }
@@ -277,13 +296,13 @@ public:
     {
       ChunkT chunk = _ref._bit_array[_id] << (CHUNK_BITS - _offset);
       if (_offset && chunk) {
-        _offset -= countl_zero(chunk);
+        _offset -= bitops::countl_zero(chunk);
       } else {
         _offset = 0; /* IMPORTANT */
         while (_id-- > 0) {
           chunk = _ref._bit_array[_id];
           if (chunk) {
-            _offset = countl_zero(chunk);
+            _offset = bitops::countl_zero(chunk);
             break;
           }
           throw std::range_error("iterate before begin");
@@ -298,10 +317,7 @@ public:
       return std::addressof(_ref) == std::addressof(other._ref) && _id == other._id &&
              _offset == other._offset;
     }
-    constexpr bool operator!=(biterator const &other) const noexcept
-    {
-      return !operator==(other);
-    }
+    constexpr bool operator!=(biterator const &other) const noexcept { return !operator==(other); }
   };
 
   biterator begin()
@@ -311,7 +327,7 @@ public:
     for (; id < CHUNK_COUNT; ++id) {
       ChunkT chunk = _bit_array[id];
       if (chunk) {
-        offset = countr_zero(chunk);
+        offset = bitops::countr_zero(chunk);
         break;
       }
     }

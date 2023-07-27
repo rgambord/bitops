@@ -3,8 +3,10 @@
  * Tested with gcc 13.1 -O3 -std=c++11
  * Output assembly is identical between portable implementation and library methods
  *
+ * Mostly everything compiles to single-instructions
+ *
  * Author: Ryan Gambord <Ryan.Gambord@oregonstate.edu>
- * Date: Jul 26 2023
+ * Date: July 26 2023
  */
 #pragma once
 

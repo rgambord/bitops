@@ -1,7 +1,7 @@
 /* Fitted fixed-width integer types
  *
- * Based on implementation by linguamachina(uid 2748290) @
- * https://stackoverflow.com/a/31272357
+ * Author: Ryan Gambord <Ryan.Gambord@oregonstate.edu>
+ * Date: July 26 2023
  */
 #pragma once
 #include <algorithm>
@@ -11,7 +11,7 @@
 
 /* clang-format off */
 
-namespace FittedInt {
+namespace fitted_int {
 
 template <class T, class U = typename std::conditional<
                                  std::is_signed<T>::value, 
@@ -72,4 +72,4 @@ using uint_leastX_t =
       uintmax_t>::type >::type >::type >::type;
 
 /* clang-format on */
-}; // namespace FittedInt
+}; // namespace fitted_int
