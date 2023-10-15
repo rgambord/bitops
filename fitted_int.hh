@@ -11,6 +11,7 @@
 
 /* clang-format off */
 
+namespace util {
 namespace fitted_int {
 
 template <class T, class U = typename std::conditional<
@@ -72,4 +73,5 @@ using uint_leastX_t =
       uintmax_t>::type >::type >::type >::type;
 
 /* clang-format on */
-}; // namespace fitted_int
+} // namespace fitted_int
+} // namespace util

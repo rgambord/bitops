@@ -20,10 +20,12 @@
 #include <type_traits>
 #include <vector>
 
+#include "util/adaptors/reverse.hh"
 #include "util/bitops/bitops.hh"
 #include "util/fitted_int/fitted_int.hh"
-#include "util/adaptors/reverse.hh"
 
+namespace util
+{
 class dynamic_bitmap
 {
 public:
@@ -33,9 +35,18 @@ private:
   std::size_t _size;
   using ChunkT = std::uint64_t;
   constexpr static auto CHUNK_BITS = std::numeric_limits<ChunkT>::digits;
-  constexpr auto CHUNK_COUNT() const { return (_size + CHUNK_BITS - 1) / CHUNK_BITS; }
-  constexpr auto PAD_BITS() const { return (CHUNK_BITS * CHUNK_COUNT()) - _size; }
-  constexpr auto PAD_MASK() const { return (ChunkT)((~(ChunkT)0) >> PAD_BITS()); }
+  constexpr auto CHUNK_COUNT() const
+  {
+    return (_size + CHUNK_BITS - 1) / CHUNK_BITS;
+  }
+  constexpr auto PAD_BITS() const
+  {
+    return (CHUNK_BITS * CHUNK_COUNT()) - _size;
+  }
+  constexpr auto PAD_MASK() const
+  {
+    return (ChunkT)((~(ChunkT)0) >> PAD_BITS());
+  }
 
   std::vector<ChunkT> _bit_vec;
 
@@ -75,22 +86,27 @@ private:
 
   public:
     constexpr BitId(T val = 0) : _val(val) {}
-    constexpr BitId(ChunkId id, ChunkOffset offset) : _val(id * CHUNK_BITS + offset) {}
+    constexpr BitId(ChunkId id, ChunkOffset offset)
+        : _val(id * CHUNK_BITS + offset)
+    {
+    }
     constexpr operator T &() { return _val; }
     constexpr operator T const &() const { return _val; }
   };
 
 public:
-  dynamic_bitmap(std::size_t size) : _bit_vec{}, _size(size) {
+  dynamic_bitmap(std::size_t size) : _bit_vec{}, _size(size)
+  {
     _bit_vec.resize(CHUNK_COUNT());
   }
 
   template <std::size_t N>
-  explicit constexpr dynamic_bitmap(std::bitset<N> const &other) : _bit_vec{}, _size(N)
+  explicit constexpr dynamic_bitmap(std::bitset<N> const &other)
+      : _bit_vec{}, _size(N)
   {
     _bit_vec.resize(CHUNK_COUNT());
-    static_assert(std::numeric_limits<unsigned long long>::digits >= CHUNK_BITS);
-    unsigned long long block;
+    static_assert(std::numeric_limits<unsigned long long>::digits >=
+                  CHUNK_BITS);
     std::bitset<N> mask;
     mask.flip() >>= (N - CHUNK_BITS);
     std::bitset<N> copy(other);
@@ -100,7 +116,8 @@ public:
     }
   }
 
-  void resize(std::size_t size) {
+  void resize(std::size_t size)
+  {
     _size = size;
     _bit_vec.resize(CHUNK_COUNT());
   }
@@ -127,7 +144,7 @@ public:
     for (auto &chunk : _bit_vec) chunk = 0;
     return *this;
   }
-  
+
   dynamic_bitmap &reset(BitId bit)
   {
     set(bit, false);
@@ -155,7 +172,8 @@ public:
 
   bool operator==(dynamic_bitmap const &other) const noexcept
   {
-    return std::equal(_bit_vec.cbegin(), _bit_vec.cend(), other._bit_vec.cbegin());
+    return std::equal(_bit_vec.cbegin(), _bit_vec.cend(),
+                      other._bit_vec.cbegin());
   }
 
   bool operator!=(dynamic_bitmap const &other) const noexcept
@@ -163,41 +181,47 @@ public:
     return !(*this == other);
   }
 
-  dynamic_bitmap operator~() const noexcept { return dynamic_bitmap(*this).flip(); }
+  dynamic_bitmap operator~() const noexcept
+  {
+    return dynamic_bitmap(*this).flip();
+  }
 
   dynamic_bitmap &operator&=(dynamic_bitmap const &other) noexcept
   {
-    std::transform(_bit_vec.begin(), _bit_vec.end(), other._bit_vec.begin(), _bit_vec.begin(),
-                   std::bit_and());
+    std::transform(_bit_vec.begin(), _bit_vec.end(), other._bit_vec.begin(),
+                   _bit_vec.begin(), std::bit_and());
     return *this;
   }
   dynamic_bitmap &operator|=(dynamic_bitmap const &other) noexcept
   {
-    std::transform(_bit_vec.begin(), _bit_vec.end(), other._bit_vec.begin(), _bit_vec.begin(),
-                   std::bit_or());
+    std::transform(_bit_vec.begin(), _bit_vec.end(), other._bit_vec.begin(),
+                   _bit_vec.begin(), std::bit_or());
     return *this;
   }
   dynamic_bitmap &operator^=(dynamic_bitmap const &other) noexcept
   {
-    std::transform(_bit_vec.begin(), _bit_vec.end(), other._bit_vec.begin(), _bit_vec.begin(),
-                   std::bit_xor());
+    std::transform(_bit_vec.begin(), _bit_vec.end(), other._bit_vec.begin(),
+                   _bit_vec.begin(), std::bit_xor());
     return *this;
   }
 
   bool any() const noexcept
   {
-    return std::any_of(_bit_vec.begin(), _bit_vec.end(), [](auto x) { return x; });
+    return std::any_of(_bit_vec.begin(), _bit_vec.end(),
+                       [](auto x) { return x; });
   }
   bool none() const noexcept { return !any(); }
   bool all() const noexcept
   {
     return _bit_vec.back() == PAD_MASK() &&
-           std::all_of(_bit_vec.begin(), _bit_vec.end() - 1, [](auto x) { return !~x; });
+           std::all_of(_bit_vec.begin(), _bit_vec.end() - 1,
+                       [](auto x) { return !~x; });
   }
 
-  BitId count() const noexcept { 
+  BitId count() const noexcept
+  {
     BitId cnt = 0;
-    for (auto const&v : _bit_vec) cnt += bitops::popcount(v);
+    for (auto const &v : _bit_vec) cnt += bitops::popcount(v);
     return cnt;
   }
 
@@ -208,7 +232,9 @@ public:
   private:
     ChunkT &_chunk;
     ChunkT _mask;
-    constexpr bit_proxy(ChunkT &chunk, ChunkT mask) : _chunk(chunk), _mask(mask) {}
+    constexpr bit_proxy(ChunkT &chunk, ChunkT mask) : _chunk(chunk), _mask(mask)
+    {
+    }
     constexpr bit_proxy(ChunkT &chunk, ChunkOffset offset)
         : _chunk(chunk), _mask(ChunkT(1) << offset)
     {
@@ -256,7 +282,10 @@ public:
         : _ref(ref), _id(id), _offset(offset)
     {
     }
-    constexpr biterator(dynamic_bitmap &ref, BitId id) : _ref(ref), _id(id), _offset(id) {}
+    constexpr biterator(dynamic_bitmap &ref, BitId id)
+        : _ref(ref), _id(id), _offset(id)
+    {
+    }
 
   public:
     constexpr reference operator*() { return reference(_id, _offset); }
@@ -303,10 +332,13 @@ public:
 
     constexpr bool operator==(biterator const &other) const noexcept
     {
-      return std::addressof(_ref) == std::addressof(other._ref) && _id == other._id &&
-             _offset == other._offset;
+      return std::addressof(_ref) == std::addressof(other._ref) &&
+             _id == other._id && _offset == other._offset;
     }
-    constexpr bool operator!=(biterator const &other) const noexcept { return !operator==(other); }
+    constexpr bool operator!=(biterator const &other) const noexcept
+    {
+      return !operator==(other);
+    }
   };
 
   biterator begin()
@@ -327,14 +359,19 @@ public:
 
   template <class CharT = char, class Traits = std::char_traits<CharT>,
             class Allocator = std::allocator<CharT>>
-  std::basic_string<CharT, Traits, Allocator> to_string(CharT zero = CharT('0'),
-                                                        CharT one = CharT('1')) const
+  std::basic_string<CharT, Traits, Allocator>
+  to_string(CharT zero = CharT('0'), CharT one = CharT('1')) const
   {
     return std::accumulate(
-        _bit_vec.rbegin(), _bit_vec.rend(), std::basic_string<CharT, Traits, Allocator>(),
-        [&](std::basic_string<CharT, Traits, Allocator> const &acc, ChunkT const &i) {
-          return acc + std::bitset<CHUNK_BITS>(i).template to_string<CharT, Traits, Allocator>(zero, one);
-        }).substr(CHUNK_BITS * CHUNK_COUNT() - _size);
+               _bit_vec.rbegin(), _bit_vec.rend(),
+               std::basic_string<CharT, Traits, Allocator>(),
+               [&](std::basic_string<CharT, Traits, Allocator> const &acc,
+                   ChunkT const &i) {
+                 return acc + std::bitset<CHUNK_BITS>(i)
+                                  .template to_string<CharT, Traits, Allocator>(
+                                      zero, one);
+               })
+        .substr(CHUNK_BITS * CHUNK_COUNT() - _size);
   }
 };
 
@@ -361,3 +398,4 @@ operator<<(std::basic_ostream<CharT, Traits> &os, const dynamic_bitmap &x)
   os << x.to_string();
   return os;
 }
+} // namespace util

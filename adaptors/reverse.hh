@@ -1,6 +1,6 @@
 /* Simple reverse iteration adaptor
  *
- * for (... : adaptor::reverse{...})
+ * for (... : reverse{...})
  *
  * Author: Ryan Gambord <Ryan.Gambord@oregonstate.edu>
  * Date: Jul 26 2023
@@ -10,7 +10,10 @@
 #include <initializer_list>
 #include <iterator>
 
-namespace adaptor {
+namespace util
+{
+namespace adaptor
+{
 
 template <class iter>
 class reverse
@@ -26,13 +29,13 @@ public:
   }
 
   template <class T, std::size_t N>
-  constexpr reverse(T (&ref)[N]) : _begin(std::end(ref)),
-      _end(std::begin(ref))
+  constexpr reverse(T (&ref)[N]) : _begin(std::end(ref)), _end(std::begin(ref))
   {
   }
 
   template <class T>
-  constexpr reverse(std::initializer_list<T> list) : _begin(std::end(list)), _end(std::begin(list))
+  constexpr reverse(std::initializer_list<T> list)
+      : _begin(std::end(list)), _end(std::begin(list))
   {
   }
   constexpr auto begin() { return _begin; }
@@ -40,11 +43,15 @@ public:
 };
 
 template <class T>
-reverse(std::initializer_list<T>) -> reverse<std::reverse_iterator<decltype(std::begin(*(std::initializer_list<T>*)nullptr))>>;
+reverse(std::initializer_list<T>) -> reverse<std::reverse_iterator<
+    decltype(std::begin(*(std::initializer_list<T> *)nullptr))>>;
 
 template <class T, std::size_t N>
-reverse(T (&ref)[N]) -> reverse<std::reverse_iterator<decltype(std::begin(*(T (*)[N])nullptr))>>;
+reverse(T (&ref)[N])
+    -> reverse<std::reverse_iterator<decltype(std::begin(*(T(*)[N]) nullptr))>>;
 
 template <class T>
-reverse(T&) -> reverse<std::reverse_iterator<decltype(std::begin(*(T*)nullptr))>>;
-};
+reverse(T &)
+    -> reverse<std::reverse_iterator<decltype(std::begin(*(T *)nullptr))>>;
+} // namespace adaptor
+} // namespace util

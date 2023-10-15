@@ -1,13 +1,15 @@
 /* A slightly better version of std::bitset
  *
- * Supports fast iteration vs std::vector<bool> and std::bitset while also supporting the bitwise
- * arithmetic of std::bitset
+ * Supports fast iteration vs std::vector<bool> and std::bitset while also
+ * supporting the bitwise arithmetic of std::bitset
  *
  * Benchmark results:
- * + Several orders of magnitude faster than std::vector<bool> for just about anything.
- * + On-par with std::bitset for most operations; orders of magnitude faster iteration over set
- *   bits.
- * + Dynamic_bitmap is ~20x slower for small sizes, but reaches parity around ~256-512 bits.
+ * + Several orders of magnitude faster than std::vector<bool> for just about
+ * anything.
+ * + On-par with std::bitset for most operations; orders of magnitude faster
+ * iteration over set bits.
+ * + Dynamic_bitmap is ~20x slower for small sizes, but reaches parity around
+ * ~256-512 bits.
  *
  * Author: Ryan Gambord <Ryan.Gambord@oregonstate.edu>
  * Date: July 26 2023
@@ -26,6 +28,9 @@
 #include "util/adaptors/reverse.hh"
 #include "util/bitops/bitops.hh"
 #include "util/fitted_int/fitted_int.hh"
+
+namespace util
+{
 
 template <std::size_t N>
 class bitmap
@@ -84,7 +89,10 @@ private:
 
   public:
     constexpr BitId(T val = 0) : _val(val) {}
-    constexpr BitId(ChunkId id, ChunkOffset offset) : _val(id * CHUNK_BITS + offset) {}
+    constexpr BitId(ChunkId id, ChunkOffset offset)
+        : _val(id * CHUNK_BITS + offset)
+    {
+    }
     constexpr operator T &() { return _val; }
     constexpr operator T const &() const { return _val; }
   };
@@ -94,8 +102,8 @@ public:
 
   explicit constexpr bitmap(std::bitset<N> const &other) : _bit_array{}
   {
-    static_assert(std::numeric_limits<unsigned long long>::digits >= CHUNK_BITS);
-    unsigned long long block;
+    static_assert(std::numeric_limits<unsigned long long>::digits >=
+                  CHUNK_BITS);
     std::bitset<N> mask;
     mask.flip() >>= (N - CHUNK_BITS);
     std::bitset<N> copy(other);
@@ -107,7 +115,8 @@ public:
 
   explicit constexpr operator std::bitset<N>() const
   {
-    static_assert(std::numeric_limits<unsigned long long>::digits >= CHUNK_BITS);
+    static_assert(std::numeric_limits<unsigned long long>::digits >=
+                  CHUNK_BITS);
     std::bitset<N> ret;
 
     for (ChunkT const &chunk : adaptor::reverse(_bit_array)) {
@@ -166,29 +175,35 @@ public:
 
   constexpr bool operator==(bitmap const &other) const noexcept
   {
-    return std::equal(_bit_array.cbegin(), _bit_array.cend(), other._bit_array.cbegin());
+    return std::equal(_bit_array.cbegin(), _bit_array.cend(),
+                      other._bit_array.cbegin());
   }
 
-  constexpr bool operator!=(bitmap const &other) const noexcept { return !(*this == other); }
+  constexpr bool operator!=(bitmap const &other) const noexcept
+  {
+    return !(*this == other);
+  }
 
   constexpr bitmap operator~() const noexcept { return bitmap(*this).flip(); }
 
   constexpr bitmap &operator&=(bitmap const &other) noexcept
   {
-    std::transform(_bit_array.begin(), _bit_array.end(), other._bit_array.begin(),
-                   _bit_array.begin(), std::bit_and());
+    std::transform(_bit_array.begin(), _bit_array.end(),
+                   other._bit_array.begin(), _bit_array.begin(),
+                   std::bit_and());
     return *this;
   }
   constexpr bitmap &operator|=(bitmap const &other) noexcept
   {
-    std::transform(_bit_array.begin(), _bit_array.end(), other._bit_array.begin(),
-                   _bit_array.begin(), std::bit_or());
+    std::transform(_bit_array.begin(), _bit_array.end(),
+                   other._bit_array.begin(), _bit_array.begin(), std::bit_or());
     return *this;
   }
   constexpr bitmap &operator^=(bitmap const &other) noexcept
   {
-    std::transform(_bit_array.begin(), _bit_array.end(), other._bit_array.begin(),
-                   _bit_array.begin(), std::bit_xor());
+    std::transform(_bit_array.begin(), _bit_array.end(),
+                   other._bit_array.begin(), _bit_array.begin(),
+                   std::bit_xor());
     return *this;
   }
 
@@ -202,7 +217,8 @@ public:
   constexpr bool all() const noexcept
   {
     return _bit_array.back() == PAD_MASK &&
-           std::all_of(_bit_array.begin(), _bit_array.end() - 1, [](auto x) { return !~x; });
+           std::all_of(_bit_array.begin(), _bit_array.end() - 1,
+                       [](auto x) { return !~x; });
   }
 
   constexpr BitId count() const noexcept
@@ -219,7 +235,9 @@ public:
   private:
     ChunkT &_chunk;
     ChunkT _mask;
-    constexpr bit_proxy(ChunkT &chunk, ChunkT mask) : _chunk(chunk), _mask(mask) {}
+    constexpr bit_proxy(ChunkT &chunk, ChunkT mask) : _chunk(chunk), _mask(mask)
+    {
+    }
     constexpr bit_proxy(ChunkT &chunk, ChunkOffset offset)
         : _chunk(chunk), _mask(ChunkT(1) << offset)
     {
@@ -267,7 +285,9 @@ public:
         : _ref(ref), _id(id), _offset(offset)
     {
     }
-    constexpr biterator(bitmap &ref, BitId id) : _ref(ref), _id(id), _offset(id) {}
+    constexpr biterator(bitmap &ref, BitId id) : _ref(ref), _id(id), _offset(id)
+    {
+    }
 
   public:
     constexpr reference operator*() { return reference(_id, _offset); }
@@ -314,10 +334,13 @@ public:
 
     constexpr bool operator==(biterator const &other) const noexcept
     {
-      return std::addressof(_ref) == std::addressof(other._ref) && _id == other._id &&
-             _offset == other._offset;
+      return std::addressof(_ref) == std::addressof(other._ref) &&
+             _id == other._id && _offset == other._offset;
     }
-    constexpr bool operator!=(biterator const &other) const noexcept { return !operator==(other); }
+    constexpr bool operator!=(biterator const &other) const noexcept
+    {
+      return !operator==(other);
+    }
   };
 
   biterator begin()
@@ -338,10 +361,11 @@ public:
 
   template <class CharT = char, class Traits = std::char_traits<CharT>,
             class Allocator = std::allocator<CharT>>
-  std::basic_string<CharT, Traits, Allocator> to_string(CharT zero = CharT('0'),
-                                                        CharT one = CharT('1')) const
+  std::basic_string<CharT, Traits, Allocator>
+  to_string(CharT zero = CharT('0'), CharT one = CharT('1')) const
   {
-    return std::bitset<N>(*this).template to_string<CharT, Traits, Allocator>(zero, one);
+    return std::bitset<N>(*this).template to_string<CharT, Traits, Allocator>(
+        zero, one);
   }
 };
 
@@ -381,3 +405,4 @@ operator>>(std::basic_istream<CharT, Traits> &is, bitmap<N> &x)
   x = s;
   return is;
 }
+} // namespace util

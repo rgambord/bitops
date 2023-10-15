@@ -1,7 +1,8 @@
 /* Portable <bit> implementation
  *
  * Tested with gcc 13.1 -O3 -std=c++11
- * Output assembly is identical between portable implementation and library methods
+ * Output assembly is identical between portable implementation and library
+ * methods
  *
  * Mostly everything compiles to single-instructions
  *
@@ -12,7 +13,8 @@
 
 #if __cpp_lib_bitops >= 201907L
 #include <bit>
-
+namespace util
+{
 namespace bitops
 {
 using std::bit_ceil;
@@ -26,13 +28,15 @@ using std::has_single_bit;
 using std::popcount;
 using std::rotl;
 using std::rotr;
-}; // namespace bitops
+} // namespace bitops
+} // namespace util
 #else
 #include <array>
 #include <cstddef>
 #include <limits>
 #include <type_traits>
-
+namespace util
+{
 namespace bitops
 {
 #if __cpp_lib_byte >= 201603L
@@ -129,5 +133,6 @@ rotr(T x, int s) noexcept
   return (x >> r) | (x << (std::numeric_limits<T>::digits - r));
 }
 
-}; // namespace bitops
+} // namespace bitops
+} // namespace util
 #endif
