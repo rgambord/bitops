@@ -26,8 +26,8 @@
 #include <vector>
 
 #include "util/adaptors/reverse.hh"
-#include "util/bitops/bitops.hh"
-#include "util/fitted_int/fitted_int.hh"
+#include "util/bit.hh"
+#include "util/fitted_int.hh"
 
 namespace util
 {
