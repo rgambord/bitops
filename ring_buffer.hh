@@ -7,7 +7,7 @@
 namespace util
 {
 template <class T, std::size_t N>
-class RingBuffer
+class ring_buffer
 {
 private:
   alignas(T) unsigned char _buffer[N][sizeof(T)];
@@ -26,8 +26,8 @@ private:
   size_type _size;
 
 public:
-  RingBuffer() : _front((T *)_buffer[0]), _back((T *)_buffer[0]), _size(0) {}
-  ~RingBuffer()
+  ring_buffer() : _front((T *)_buffer[0]), _back((T *)_buffer[0]), _size(0) {}
+  ~ring_buffer()
   {
     while (!empty()) pop();
   }
