@@ -66,12 +66,11 @@ private:
   constexpr static value_type mask = (~(value_type)0) >> (std::numeric_limits<value_type>::digits - N);
 
 public:
-  template <class T2>
-  constexpr uint_exactX_t(T2 val) : n{((value_type)val) & mask}
+  constexpr uint_exactX_t(value_type val) : n(val & mask)
   {
   }
 
-  constexpr uint_exactX_t() : n{0} {}
+  constexpr uint_exactX_t() : n(0) {}
   constexpr uint_exactX_t(uint_exactX_t const &other) : n{other.n} {}
   constexpr uint_exactX_t(uint_exactX_t &&other) : n{other.n} {}
 
